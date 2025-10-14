@@ -45,8 +45,11 @@ function customfield_picture_pluginfile($course, $cm, $context, $filearea, $args
     $field = field_controller::create($datarecord->fieldid);
     $data = data_controller::create(0, $datarecord, $field);
 
-    if ($field->get('type') !== 'picture' || $data->get_context() !== $context ||
-            !$field->get_handler()->can_view($field, $data->get('instanceid'))) {
+    if (
+        $field->get('type') !== 'picture' ||
+        $data->get_context() !== $context ||
+        !$field->get_handler()->can_view($field, $data->get('instanceid'))
+    ) {
         return false;
     }
 

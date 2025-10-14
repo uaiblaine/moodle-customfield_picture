@@ -31,7 +31,6 @@ use core_customfield\field_config_form;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class field_controller_test extends advanced_testcase {
-
     /**
      * Test that using base field controller returns our picture type
      */

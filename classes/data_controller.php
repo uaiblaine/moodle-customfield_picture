@@ -32,7 +32,6 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class data_controller extends \core_customfield\data_controller {
-
     /**
      * Return the name of the field where the information is stored
      *
@@ -62,8 +61,13 @@ class data_controller extends \core_customfield\data_controller {
      * @param MoodleQuickForm $mform
      */
     public function instance_form_definition(MoodleQuickForm $mform): void {
-        $mform->addElement('filemanager', $this->get_form_element_name(), $this->get_field()->get_formatted_name(), null,
-            $this->get_filemanager_options());
+        $mform->addElement(
+            'filemanager',
+            $this->get_form_element_name(),
+            $this->get_field()->get_formatted_name(),
+            null,
+            $this->get_filemanager_options(),
+        );
     }
 
     /**
@@ -72,12 +76,19 @@ class data_controller extends \core_customfield\data_controller {
      * @param stdClass $data
      */
     public function instance_form_before_set_data(stdClass $data): void {
-        $draftid = file_get_submitted_draft_itemid($this->get_form_element_name());
+        $fieldname = $this->get_form_element_name();
 
-        file_prepare_draft_area($draftid, $this->get_context()->id, 'customfield_picture', 'file', $this->get('id'),
-            $this->get_filemanager_options());
+        $draftid = file_get_submitted_draft_itemid($fieldname);
+        file_prepare_draft_area(
+            $draftid,
+            $this->get_context()->id,
+            'customfield_picture',
+            'file',
+            $this->get('id'),
+            $this->get_filemanager_options(),
+        );
 
-        $data->{$this->get_form_element_name()} = $draftid;
+        $data->{$fieldname} = $draftid;
     }
 
     /**
@@ -91,8 +102,14 @@ class data_controller extends \core_customfield\data_controller {
         // Trigger save.
         parent::instance_form_save((object) [$fieldname => 1]);
 
-        file_save_draft_area_files($data->{$fieldname}, $this->get_context()->id, 'customfield_picture', 'file',
-            $this->get('id'), $this->get_filemanager_options());
+        file_save_draft_area_files(
+            $data->{$fieldname},
+            $this->get_context()->id,
+            'customfield_picture',
+            'file',
+            $this->get('id'),
+            $this->get_filemanager_options(),
+        );
     }
 
     /**
@@ -108,7 +125,6 @@ class data_controller extends \core_customfield\data_controller {
      * Implement the backup callback in order to include embedded files.
      *
      * @param \backup_nested_element $customfieldelement
-     * @return void
      */
     public function backup_define_structure(backup_nested_element $customfieldelement): void {
         $annotations = $customfieldelement->get_file_annotations();
@@ -124,7 +140,6 @@ class data_controller extends \core_customfield\data_controller {
      * @param \restore_structure_step $step
      * @param int $newid
      * @param int $oldid
-     * @return void
      */
     public function restore_define_structure(\restore_structure_step $step, int $newid, int $oldid): void {
         if (!$step->get_mappingid('customfield_picture_data', $oldid)) {
@@ -139,16 +154,28 @@ class data_controller extends \core_customfield\data_controller {
      * @return string|null
      */
     public function export_value(): ?string {
-        $files = get_file_storage()->get_area_files($this->get_context()->id, 'customfield_picture', 'file', $this->get('id'),
-            '', false);
+        $files = get_file_storage()->get_area_files(
+            $this->get_context()->id,
+            'customfield_picture',
+            'file',
+            $this->get('id'),
+            '',
+            false,
+        );
 
-        if (empty($files)) {
+        if (count($files) === 0) {
             return null;
         }
 
         $file = reset($files);
-        $fileurl = moodle_url::make_pluginfile_url($file->get_contextid(), $file->get_component(), $file->get_filearea(),
-            $file->get_itemid(), $file->get_filepath(), $file->get_filename());
+        $fileurl = moodle_url::make_pluginfile_url(
+            $file->get_contextid(),
+            $file->get_component(),
+            $file->get_filearea(),
+            $file->get_itemid(),
+            $file->get_filepath(),
+            $file->get_filename(),
+        );
 
         return html_writer::img((string) $fileurl, $this->get_field()->get_formatted_name());
     }

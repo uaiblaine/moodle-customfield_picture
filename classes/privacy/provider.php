@@ -31,8 +31,7 @@ use stdClass;
  * @copyright  2022 Paul Holden <paulh@moodle.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class provider implements null_provider, customfield_provider {
-
+class provider implements customfield_provider, null_provider {
     /**
      * Plugin language string identifier to explain why this plugin stores no data
      *
@@ -74,6 +73,5 @@ class provider implements null_provider, customfield_provider {
      * @param int[] $contextids
      */
     public static function before_delete_fields(string $select, array $params, array $contextids): void {
-
     }
 }

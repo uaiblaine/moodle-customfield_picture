@@ -33,7 +33,6 @@ use core_customfield\data;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class data_controller_test extends advanced_testcase {
-
     /**
      * Test that using base field controller returns our picture type
      */
@@ -97,8 +96,14 @@ final class data_controller_test extends advanced_testcase {
 
         // Validate file was stored.
         $datainstance = data::get_record(['fieldid' => $field->get('id'), 'instanceid' => $formsubmission->id]);
-        $files = get_file_storage()->get_area_files($datainstance->get('contextid'), 'customfield_picture', 'file',
-            $datainstance->get('id'), '', false);
+        $files = get_file_storage()->get_area_files(
+            $datainstance->get('contextid'),
+            'customfield_picture',
+            'file',
+            $datainstance->get('id'),
+            '',
+            false,
+        );
 
         $this->assertCount(1, $files);
         $file = reset($files);

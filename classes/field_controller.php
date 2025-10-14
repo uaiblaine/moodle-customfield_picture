@@ -27,8 +27,7 @@ use MoodleQuickForm;
  * @copyright  2022 Paul Holden <paulh@moodle.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class field_controller  extends \core_customfield\field_controller {
-
+class field_controller extends \core_customfield\field_controller {
     /**
      * Add form elements for editing the custom field definition
      *
@@ -41,8 +40,12 @@ class field_controller  extends \core_customfield\field_controller {
         $mform->setExpanded('header_specificsettings', true);
 
         // Maximum upload size.
-        $mform->addElement('select', 'configdata[maximumbytes]', get_string('maxbytes', 'core_admin'),
-            get_max_upload_sizes($CFG->maxbytes));
+        $mform->addElement(
+            'select',
+            'configdata[maximumbytes]',
+            get_string('maxbytes', 'core_admin'),
+            get_max_upload_sizes($CFG->maxbytes),
+        );
         $mform->setType('configdata[maximumbytes]', PARAM_INT);
     }
 
