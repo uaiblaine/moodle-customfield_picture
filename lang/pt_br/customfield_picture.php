@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Plugin version details
+ * Plugin language strings
  *
  * @package    customfield_picture
  * @copyright  2022 Paul Holden <paulh@moodle.com>
@@ -24,11 +24,6 @@
 
 defined('MOODLE_INTERNAL') || die;
 
-$plugin->component = 'customfield_picture';
-$plugin->release   = '5.2';
-$plugin->version   = 2026090500;
-// Moodle 4.4 onwards: the custom field backup callbacks this plugin implements arrived there (MDL-79151).
-$plugin->requires  = 2024042200;
-$plugin->maturity  = MATURITY_STABLE;
-// The branches this fork is tested on: the fleet's 4.5 LTS, 5.1 and 5.2 stacks.
-$plugin->supported = [405, 502];
+$string['error:notanimage'] = 'O arquivo "{$a}" não é uma imagem. Só são aceitas imagens para web (PNG, JPEG, GIF, WebP ou SVG com viewBox).';
+$string['pluginname'] = 'Imagem';
+$string['privacy:metadata'] = 'O campo personalizado Imagem não armazena dados pessoais';

@@ -24,5 +24,6 @@
 
 defined('MOODLE_INTERNAL') || die;
 
+$string['error:notanimage'] = 'The file "{$a}" is not an image. Only web images (PNG, JPEG, GIF, WebP, or SVG with a viewBox) are accepted.';
 $string['pluginname'] = 'Picture';
 $string['privacy:metadata'] = 'The Picture custom field plugin does not store any personal data';

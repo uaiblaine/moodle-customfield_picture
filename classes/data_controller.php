@@ -14,12 +14,10 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-declare(strict_types=1);
-
 namespace customfield_picture;
 
 use backup_nested_element;
-use html_writer;
+use context_user;
 use moodle_url;
 use MoodleQuickForm;
 use stdClass;
@@ -32,6 +30,9 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class data_controller extends \core_customfield\data_controller {
+    /** @var string The one file area of this field type; the item id is the customfield_data id. */
+    public const FILEAREA = 'file';
+
     /**
      * Return the name of the field where the information is stored
      *
@@ -44,11 +45,15 @@ class data_controller extends \core_customfield\data_controller {
     /**
      * Return options suitable for the file manager element
      *
+     * A maximum size of 0 (the "site upload limit" choice of the field settings, and the value of a
+     * field created without one) is not "unlimited": the upload endpoint clamps it to the site and
+     * course limits (repository/repository_ajax.php), so the effective cap is the site's.
+     *
      * @return array
      */
     private function get_filemanager_options(): array {
         return [
-            'maxbytes' => $this->get_field()->get_configdata_property('maximumbytes'),
+            'maxbytes' => (int) $this->get_field()->get_configdata_property('maximumbytes'),
             'maxfiles' => 1,
             'subdirs' => 0,
             'accepted_types' => 'web_image',
@@ -59,6 +64,7 @@ class data_controller extends \core_customfield\data_controller {
      * Add form elements for editing the custom field instance
      *
      * @param MoodleQuickForm $mform
+     * @return void
      */
     public function instance_form_definition(MoodleQuickForm $mform): void {
         $mform->addElement(
@@ -74,6 +80,7 @@ class data_controller extends \core_customfield\data_controller {
      * Prepare file draft area prior to loading form
      *
      * @param stdClass $data
+     * @return void
      */
     public function instance_form_before_set_data(stdClass $data): void {
         $fieldname = $this->get_form_element_name();
@@ -83,7 +90,7 @@ class data_controller extends \core_customfield\data_controller {
             $draftid,
             $this->get_context()->id,
             'customfield_picture',
-            'file',
+            self::FILEAREA,
             $this->get('id'),
             $this->get_filemanager_options(),
         );
@@ -92,24 +99,93 @@ class data_controller extends \core_customfield\data_controller {
     }
 
     /**
+     * Refuse a draft area holding anything that is not a web image
+     *
+     * The file manager's accepted types are enforced by the upload endpoint from a parameter the
+     * client sends, and file_save_draft_area_files() never checks types at all, so this is the
+     * check that actually holds: every file of the draft area must be an image GD (or, for SVG, the
+     * XML parser) accepts, with a MIME type in the web_image group.
+     *
+     * @param array $data
+     * @param array $files
+     * @return array array of errors
+     */
+    public function instance_form_validation(array $data, array $files): array {
+        $fieldname = $this->get_form_element_name();
+        $errors = parent::instance_form_validation($data, $files);
+        if (isset($data[$fieldname])) {
+            $rejected = $this->rejected_draft_files((int) $data[$fieldname]);
+            if ($rejected) {
+                $errors[$fieldname] = get_string('error:notanimage', 'customfield_picture', implode(', ', $rejected));
+            }
+        }
+        return $errors;
+    }
+
+    /**
      * Move submitted file to storage
      *
+     * Validation is repeated here because not every caller goes through the form: the course web
+     * services set custom field values from raw request data and call this method directly. A
+     * submission that does not carry the element at all leaves the stored picture untouched.
+     *
      * @param stdClass $data
+     * @return void
+     * @throws \moodle_exception When the draft area holds a file that is not a web image.
      */
     public function instance_form_save(stdClass $data): void {
         $fieldname = $this->get_form_element_name();
+        $draftitemid = (int) ($data->{$fieldname} ?? 0);
+
+        /* No element in the submission means nothing was said about this field: the course web
+           services save whichever custom fields the caller named, and the handler still calls
+           every field's save. Copying a nonexistent draft area would EMPTY the stored one
+           (file_save_draft_area_files() has no early return for a zero draft id). */
+        if (!$draftitemid) {
+            return;
+        }
+
+        $rejected = $this->rejected_draft_files($draftitemid);
+        if ($rejected) {
+            throw new \moodle_exception('error:notanimage', 'customfield_picture', '', implode(', ', $rejected));
+        }
 
         // Trigger save.
         parent::instance_form_save((object) [$fieldname => 1]);
 
         file_save_draft_area_files(
-            $data->{$fieldname},
+            $draftitemid,
             $this->get_context()->id,
             'customfield_picture',
-            'file',
+            self::FILEAREA,
             $this->get('id'),
             $this->get_filemanager_options(),
         );
+    }
+
+    /**
+     * The names of the files of a draft area that are not valid web images
+     *
+     * @param int $draftitemid The draft area of the current user, 0 for none.
+     * @return string[] File names, empty when every file is an image.
+     */
+    private function rejected_draft_files(int $draftitemid): array {
+        global $USER;
+
+        // A draft area belongs to a logged-in user; without one there is nothing to inspect (or to copy).
+        if (!$draftitemid || empty($USER->id)) {
+            return [];
+        }
+        $usercontext = context_user::instance($USER->id);
+        $files = get_file_storage()->get_area_files($usercontext->id, 'user', 'draft', $draftitemid, 'id', false);
+
+        $rejected = [];
+        foreach ($files as $file) {
+            if (!$file->is_valid_image()) {
+                $rejected[] = $file->get_filename();
+            }
+        }
+        return $rejected;
     }
 
     /**
@@ -125,12 +201,13 @@ class data_controller extends \core_customfield\data_controller {
      * Implement the backup callback in order to include embedded files.
      *
      * @param \backup_nested_element $customfieldelement
+     * @return void
      */
     public function backup_define_structure(backup_nested_element $customfieldelement): void {
         $annotations = $customfieldelement->get_file_annotations();
 
-        if (!isset($annotations['customfield_picture']['file'])) {
-            $customfieldelement->annotate_files('customfield_picture', 'file', 'id');
+        if (!isset($annotations['customfield_picture'][self::FILEAREA])) {
+            $customfieldelement->annotate_files('customfield_picture', self::FILEAREA, 'id');
         }
     }
 
@@ -140,12 +217,36 @@ class data_controller extends \core_customfield\data_controller {
      * @param \restore_structure_step $step
      * @param int $newid
      * @param int $oldid
+     * @return void
      */
     public function restore_define_structure(\restore_structure_step $step, int $newid, int $oldid): void {
         if (!$step->get_mappingid('customfield_picture_data', $oldid)) {
             $step->set_mapping('customfield_picture_data', $oldid, $newid, true);
-            $step->add_related_files('customfield_picture', 'file', 'customfield_picture_data');
+            $step->add_related_files('customfield_picture', self::FILEAREA, 'customfield_picture_data');
         }
+    }
+
+    /**
+     * The stored picture, if any
+     *
+     * The data row does not say whether a picture exists: instance_form_save() writes intvalue 1
+     * whenever the form is saved, with or without a file. Only the file area does.
+     *
+     * @return \stored_file|null The picture, or null when none was uploaded.
+     */
+    public function get_file(): ?\stored_file {
+        if (!$this->get('id')) {
+            return null;
+        }
+        $files = get_file_storage()->get_area_files(
+            $this->get_context()->id,
+            'customfield_picture',
+            self::FILEAREA,
+            $this->get('id'),
+            'itemid, filepath, filename',
+            false,
+        );
+        return $files ? reset($files) : null;
     }
 
     /**
@@ -154,20 +255,13 @@ class data_controller extends \core_customfield\data_controller {
      * @return string|null
      */
     public function export_value(): ?string {
-        $files = get_file_storage()->get_area_files(
-            $this->get_context()->id,
-            'customfield_picture',
-            'file',
-            $this->get('id'),
-            '',
-            false,
-        );
+        global $OUTPUT;
 
-        if (count($files) === 0) {
+        $file = $this->get_file();
+        if ($file === null) {
             return null;
         }
 
-        $file = reset($files);
         $fileurl = moodle_url::make_pluginfile_url(
             $file->get_contextid(),
             $file->get_component(),
@@ -177,7 +271,10 @@ class data_controller extends \core_customfield\data_controller {
             $file->get_filename(),
         );
 
-        return html_writer::img((string) $fileurl, $this->get_field()->get_formatted_name());
+        return $OUTPUT->render_from_template('customfield_picture/picture', [
+            'url' => $fileurl->out(false),
+            'alt' => $this->get_field()->get_formatted_name(false),
+        ]);
     }
 
     /**
@@ -186,7 +283,7 @@ class data_controller extends \core_customfield\data_controller {
      * @return bool
      */
     public function delete(): bool {
-        get_file_storage()->delete_area_files($this->get_context()->id, 'customfield_picture', 'file', $this->get('id'));
+        get_file_storage()->delete_area_files($this->get_context()->id, 'customfield_picture', self::FILEAREA, $this->get('id'));
 
         return parent::delete();
     }
