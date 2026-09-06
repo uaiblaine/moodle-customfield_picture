@@ -32,6 +32,7 @@ class field_controller extends \core_customfield\field_controller {
      * Add form elements for editing the custom field definition
      *
      * @param MoodleQuickForm $mform
+     * @return void
      */
     public function config_form_definition(MoodleQuickForm $mform): void {
         global $CFG;

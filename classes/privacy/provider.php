@@ -47,6 +47,7 @@ class provider implements customfield_provider, null_provider {
      * @param data_controller $data
      * @param stdClass $exportdata
      * @param array $subcontext
+     * @return void
      */
     public static function export_customfield_data(data_controller $data, stdClass $exportdata, array $subcontext): void {
         writer::with_context($data->get_context())->export_area_files($subcontext, 'customfield_picture', 'file', $data->get('id'));
@@ -58,6 +59,7 @@ class provider implements customfield_provider, null_provider {
      * @param string $select
      * @param array $params
      * @param int[] $contextids
+     * @return void
      */
     public static function before_delete_data(string $select, array $params, array $contextids): void {
         foreach ($contextids as $contextid) {
@@ -71,6 +73,7 @@ class provider implements customfield_provider, null_provider {
      * @param string $select
      * @param array $params
      * @param int[] $contextids
+     * @return void
      */
     public static function before_delete_fields(string $select, array $params, array $contextids): void {
     }
