@@ -126,7 +126,8 @@ class data_controller extends \core_customfield\data_controller {
      * Move submitted file to storage
      *
      * Validation is repeated here because not every caller goes through the form: the course web
-     * services set custom field values from raw request data and call this method directly.
+     * services set custom field values from raw request data and call this method directly. A
+     * submission that does not carry the element at all leaves the stored picture untouched.
      *
      * @param stdClass $data
      * @return void
@@ -135,6 +136,14 @@ class data_controller extends \core_customfield\data_controller {
     public function instance_form_save(stdClass $data): void {
         $fieldname = $this->get_form_element_name();
         $draftitemid = (int) ($data->{$fieldname} ?? 0);
+
+        /* No element in the submission means nothing was said about this field: the course web
+           services save whichever custom fields the caller named, and the handler still calls
+           every field's save. Copying a nonexistent draft area would EMPTY the stored one
+           (file_save_draft_area_files() has no early return for a zero draft id). */
+        if (!$draftitemid) {
+            return;
+        }
 
         $rejected = $this->rejected_draft_files($draftitemid);
         if ($rejected) {

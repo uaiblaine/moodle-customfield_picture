@@ -36,6 +36,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **A course save that did not mention the field emptied its picture.** The custom field
+  handler runs every field's save on any save of the instance, and the course web services
+  name only the fields the caller sends; for a field absent from the submission the draft
+  id was 0, and `file_save_draft_area_files()` has no early return for that - it merges an
+  empty draft area into the stored one, deleting the file. A submission without the element
+  now leaves the stored picture untouched; one with the element and an empty draft area
+  still removes it (the control of the test).
 - **Any file type could be stored through the course web services.** The file
   manager's accepted types are enforced by the upload endpoint from a parameter
   the client sends, `file_save_draft_area_files()` checks no types, and

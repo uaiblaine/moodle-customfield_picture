@@ -504,4 +504,45 @@ final class data_controller_test extends advanced_testcase {
         $this->assertCount(1, $filesb);
         $this->assertTrue(data::record_exists($databid));
     }
+
+    /**
+     * A submission without the element leaves the stored picture alone
+     *
+     * The course web services save only the custom fields the caller names, and the handler
+     * still runs every field's save; the control is a submission WITH the element and an empty
+     * draft area, which does remove the picture.
+     *
+     * @return void
+     */
+    public function test_form_save_without_the_element_keeps_the_picture(): void {
+        global $CFG;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        /** @var core_customfield_generator $generator */
+        $generator = $this->getDataGenerator()->get_plugin_generator('core_customfield');
+        $category = $generator->create_category();
+        $field = $generator->create_field(['categoryid' => $category->get('id'), 'type' => 'picture']);
+        $data = $generator->add_instance_data($field, (int) $course->id, 1);
+        get_file_storage()->create_file_from_pathname([
+            'contextid' => $data->get('contextid'),
+            'component' => 'customfield_picture',
+            'filearea'  => 'file',
+            'itemid'    => $data->get('id'),
+            'filepath'  => '/',
+            'filename'  => 'logo.png',
+        ], "{$CFG->dirroot}/lib/tests/fixtures/gd-logo.png");
+        $controller = \core_customfield\data_controller::create($data->get('id'));
+        $this->assertNotNull($controller->get_file());
+
+        // Nothing about the field in the submission: the picture stays.
+        $controller->instance_form_save((object) ['id' => $course->id, 'fullname' => 'Renamed']);
+        $this->assertNotNull(\core_customfield\data_controller::create($data->get('id'))->get_file());
+
+        // The control: the element present with an empty draft area removes it.
+        $controller->instance_form_save((object) [$controller->get_form_element_name() => file_get_unused_draft_itemid()]);
+        $this->assertNull(\core_customfield\data_controller::create($data->get('id'))->get_file());
+    }
 }

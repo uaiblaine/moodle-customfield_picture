@@ -91,10 +91,13 @@ tests/                           PHPUnit: controllers, pluginfile gates, privacy
   its file only once no visible picture field existed on the site; the test
   creates its control field after the hidden round trip). "Teachers" keeps the
   file whenever the backup runs as someone holding `moodle/course:update`
-  (admin included, so automated backups are fine); a consumer that wants hidden
-  fields AND backups can also annotate `customfield_picture/file` from its own
-  backup plugin class, since the restore side maps hidden rows too
-  (`restore_instance_data_from_backup()` uses the editable fields).
+  (admin included, so automated backups are fine). The RESTORE side is filtered
+  the same way (`handler::restore_define_structure()` iterates the visible
+  fields), so a consumer that wants hidden fields AND backups has to carry the
+  files on both sides: annotate `customfield_picture/file` in its backup plugin
+  class, record the old data ids, and in `after_restore_course()` map them onto
+  the rows core recreated (those are restored for every editable field) before
+  `add_related_files()` - theme_boost_union_fundaseg does exactly that.
   `tests/backup_test.php` pins both behaviours.
 - **`pluginfile` refuses "Nobody" fields to everyone, admins included** —
   `course_handler::can_view()` returns false outright for that visibility
