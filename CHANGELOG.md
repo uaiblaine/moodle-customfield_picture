@@ -26,6 +26,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Moodle 5.3 declared supported (`$plugin->supported = [405, 503]`); CI runs a 5.3 leg with the
+  full matrix, and the older legs run one database.
 - `export_value()` renders a Mustache template (`customfield_picture/picture`)
   instead of `html_writer::img()`, and passes the field name in the plain
   spelling: the upstream escaped it twice, so a name holding `&` rendered as
