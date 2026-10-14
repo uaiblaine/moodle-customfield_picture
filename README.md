@@ -27,7 +27,7 @@ the context it is asked for.
 Requirements
 ------------
 
-- Moodle 4.4 or later (tested on 4.5, 5.1 and 5.2). The plugin implements the
+- Moodle 4.4 or later (tested on 4.5, 5.1, 5.2 and 5.3). The plugin implements the
   custom field backup callbacks that arrived in Moodle 4.4 (MDL-79151), so the
   stored picture travels with course backups, restores and copies.
 

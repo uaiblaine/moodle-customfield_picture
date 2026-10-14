@@ -25,10 +25,10 @@
 defined('MOODLE_INTERNAL') || die;
 
 $plugin->component = 'customfield_picture';
-$plugin->release   = '5.2';
-$plugin->version   = 2026090500;
+$plugin->release   = '5.3';
+$plugin->version   = 2026101400;
 // Moodle 4.4 onwards: the custom field backup callbacks this plugin implements arrived there (MDL-79151).
 $plugin->requires  = 2024042200;
 $plugin->maturity  = MATURITY_STABLE;
 // The branches this fork is tested on: the fleet's 4.5 LTS, 5.1 and 5.2 stacks.
-$plugin->supported = [405, 502];
+$plugin->supported = [405, 503];
